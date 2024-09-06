@@ -1,0 +1,10 @@
+fastapi[standard]
+setuptools-rust
+python-dotenv
+torch
+pydantic
+pydantic-settings
+razdel
+nltk
+navec
+git+https://github.com/openai/whisper.git
