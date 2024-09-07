@@ -1,11 +1,15 @@
-import seaborn as sns
-import matplotlib.pyplot as plt
-from openpyxl import load_workbook
+# -*- coding: utf-8 -*-
 from io import BytesIO
+
+import matplotlib.pyplot as plt
 import pandas as pd
+import seaborn as sns
+from openpyxl import load_workbook
 
 
-def read_excel_with_coordinates(file, x_start_row, x_end_row, x_column, y_start_row, y_end_row, y_column):
+def read_excel_with_coordinates(
+    file, x_start_row, x_end_row, x_column, y_start_row, y_end_row, y_column
+):
     workbook = load_workbook(file)
     sheet = workbook.active
 
@@ -23,7 +27,9 @@ def read_excel_with_coordinates(file, x_start_row, x_end_row, x_column, y_start_
     return x_data, y_data
 
 
-def create_plot(x_data, y_data, chart_type="line", x_bar_name="x", y_bar_name="y", color="blue"):
+def create_plot(
+    x_data, y_data, chart_type="line", x_bar_name="x", y_bar_name="y", color="blue"
+):
     data = pd.DataFrame({x_bar_name: x_data, y_bar_name: y_data})
 
     plt.figure()
@@ -40,7 +46,7 @@ def create_plot(x_data, y_data, chart_type="line", x_bar_name="x", y_bar_name="y
     plt.title(f"{chart_type.capitalize()}")
 
     buffer = BytesIO()
-    plt.savefig(buffer, format='png')
+    plt.savefig(buffer, format="png")
     buffer.seek(0)
 
     return buffer

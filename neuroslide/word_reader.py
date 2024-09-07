@@ -1,4 +1,6 @@
+# -*- coding: utf-8 -*-
 from docx import Document
+
 
 class WordFileReader:
     def read_file(self, file_path: str) -> str:
