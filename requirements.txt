@@ -1,4 +1,12 @@
-fastapi[standard]
-pydantic
-pydantic-settings
-python-docx
+fastapi[standard]~=0.114.0
+pydantic~=2.9.0
+pydantic-settings~=2.4.0
+python-docx~=1.1.2
+
+starlette~=0.38.4
+typing_extensions~=4.12.2
+seaborn~=0.13.2
+matplotlib~=3.9.2
+pandas~=2.2.2
+openpyxl~=3.1.5
+requests~=2.32.3
