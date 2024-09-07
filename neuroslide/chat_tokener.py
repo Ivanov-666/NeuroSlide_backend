@@ -1,5 +1,4 @@
-import datetime
-import uuid
+from datetime import datetime, timedelta
 import requests
 
 class Tokener:
@@ -9,22 +8,21 @@ class Tokener:
         self.api_key = api_key
 
     def get_access_token(self,):
-        url = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth"
-        payload = 'scope=GIGACHAT_API_CORP'
+        url = "https://iam.api.cloud.yandex.net/iam/v1/tokens"
         headers = {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Accept': 'application/json',
-            'RqUID': str(uuid.uuid4()),
-            'Authorization': f'Basic {self.api_key}'
+            'Content-Type': 'application/json',
+        }
+        data = {
+            'yandexPassportOauthToken': self.api_key
         }
 
-        response = requests.request("POST", url, headers=headers, data=payload, verify=False)
+        response = requests.request("POST", url, headers=headers, json=data, verify=False)
         response_data = response.json()
 
-        self.token = response_data['access_token']
-        self.token_end_time = datetime.datetime.fromtimestamp(response.json()["expires_at"]/1000)
+        self.token = response_data['iamToken']
+        self.token_update_time = datetime.datetime.now() + timedelta(hours=1)
 
     def get_token(self,):
-        if self.token == None or datetime.datetime.now() >= self.token_end_time:
+        if self.token == None or datetime.datetime.now() >= self.token_update_time:
             self.get_access_token()
         return self.token

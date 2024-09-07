@@ -2,52 +2,69 @@ import requests
 import json
 
 class GigachatInference:
-    def __init__(self, chat_len):
-        self.conversation_histories = {}
+    def __init__(self):
+        self.chats = {}
         self.stories_lens = {}
-        self.url = "https://gigachat.devices.sberbank.ru/api/v1/chat/completions"
-        self.chat_len = chat_len
+        self.url = "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
 
-    def get_text(self, message, chat_id, token):
-        if chat_id not in self.conversation_histories:
-            self.conversation_histories[chat_id] = [
-                {
-                    "role": "system",
-                    "content": "Ты писатель книжек для детей. Тебе нужно сочинить сказку во время интерактивного общения с пользователем. Помни, что пользователь - ребенок, и он общается проще, чем взрослый, поэтому твоя задача сочинить понятную для него сказку. Также отвечай одним предложением, чтобы ребенок мог продолжить твою сказку самостоятельно. Обязательно заканчивай свои слова каждый раз вопросом, чтобы ребенок мог ответить, продолжив тем самым сказку."
-                }
-            ]
-            self.stories_lens[chat_id] = 0
-
-        user_message = {
-            "role": "user",
-            "content": message
-        }
-        self.conversation_histories[chat_id].append(user_message)
-        self.stories_lens[chat_id] += 1
-        if self.stories_lens[chat_id] == self.chat_len:
-            user_message = [user_message, {
-                "role": "system",
-                "content": "Это будет последний твой ответ, твоя задача в нём - закончить историю, сделай это так, чтобы в истории была поучительная часть"
-            }]
-        
-        payload = json.dumps({
-            "model": "GigaChat",
-            "messages": self.conversation_histories[chat_id],
-            "n": 1,
-            "stream": False,
-            "update_interval": 0
-        })
+    def _send_request(self, messages, token):
         headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Authorization': f'Bearer {token}'
+            'Authorization': f'Bearer {token.json()["iamToken"]}',
+            'Content-Type': 'application/json; charset=utf-8'
         }
-        
-        response = requests.post(self.url, headers=headers, data=payload, verify=False)
-        story_content = response.json()['choices'][0]['message']['content']
-        self.conversation_histories[chat_id].append({
+        data = json.dumps({
+            "modelUri": "gpt://b1g72uajlds114mlufqi/yandexgpt/latest",
+            "completionOptions": {
+                "stream": False,
+                "temperature": 0.6,
+                "maxTokens": "2000"
+            },
+            "messages": messages
+        })
+        response = requests.post(self.url, headers=headers, data=data)
+        return response.json()["result"]['alternatives'][0]['message']['text']
+
+    def set_context(self, doctext: str, chat_id: str):
+        self.chats[chat_id] = [
+            {   "role": "system",
+                "content": "Ты менеджер по созданию презентаций, твоя задача помогать сотрудникам компании создавать презентации. Ты будешь составлять планы презентаций, а после реализовывать их в тексте презентации, учти, что план обязательно не должен превышать 6 пунктов, иначе презентация будет слишком большой."
+            },
+            {
+                "role": "system",
+                "content": f"Привет, тебе предстоит составить презентацию на основе этого текста, а также, при необходимости, заменить уже созданный тобой текст, на другой, если пользователь попросит. Учти, что эта презентация - отчетность, поэтому очень важно, чтобы она была точной и лаконичной, не добавляй слишком много текста. А вот и текст опорного документа: {doctext}"
+            }
+        ]
+
+    def get_base_presentation(self, message: str, chat_id: str, token: str):
+        if chat_id not in self.chats:
+            self.chats[chat_id] = [
+                {   
+                    "role": "system",
+                    "text": "Ты менеджер по созданию презентаций, твоя задача помогать сотрудникам компании создавать презентации. Ты будешь составлять планы презентаций, а после реализовывать их в тексте презентации, учти, что план обязательно не должен превышать 6 пунктов, иначе презентация будет слишком большой."
+                },
+            ]
+        user_message = {   
+            "role": "user",
+            "text": f"Давай начнем, {message}, не забудь, что для каждого слайда нужен текст и заголовок, отправь мне все это в формате json, чтобы я смог разделить твой ответ по слайдам, где слайд - элемент списка, у которого есть поля title и text, другие поля не допускаются, а презентация должна быть длиной не более 7 слайдов. Не допускай, чтобы в тексте слайда было пусто или же слишком мало текста, придерживайся 2-3 предложений, также не оставялй заголовки пустыми."
+        }
+        self.chats[chat_id].append(user_message)
+        presentation_text = self._send_request(self.chats[chat_id], token)
+        self.chats[chat_id].append({
             "role": "assistant",
-            "content": story_content
+            "content": presentation_text
         })
 
-        return story_content, self.stories_lens[chat_id] == self.chat_len
+        return presentation_text
+    
+    def rewrite_text(self, message: str, old_message: str, chat_id: str, token: str):
+        user_message = {   
+            "role": "user",
+            "text": f"Пользователю не подошел предложенный тобой текст: {old_message}, вот его требования для преределки текста {message}, не забудь, что текст не долежн быть слишком длинным, а также не должен иметь лишних комментариев, чтобы легко встроиться в презентацию"
+        }
+        self.chats[chat_id].append(user_message)
+        new_text = self._send_request(self.chats[chat_id], token)
+        self.chats[chat_id].append({
+            "role": "assistant",
+            "content": new_text
+        })
+        return new_text
