@@ -84,3 +84,11 @@ $ pre-commit run --all-files
 ```
 
 Эта команда отформатирует все файлы в директории.
+
+## Redis
+
+   Установка на linux:
+
+```bash
+$ sudo apt install redis-server
+```

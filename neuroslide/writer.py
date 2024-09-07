@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import ast
 import json
 
 import requests
@@ -8,16 +9,17 @@ class YaGptInference:
     """
     YaGptInference is a class designed to interact with the Yandex GPT API for generating text completions.
     It maintains session contexts for different chats and facilitates the construction of presentation plans from given texts.
+    Args:
+            redis_client (redis.client.Redis): redis client for YaGpt chats
     """
 
-    def __init__(self):
+    def __init__(self, redis_client):
         """
         Initializes a new instance of YaGptInference with empty chat and stories length dictionaries.
         Sets the base URL for the Yandex GPT API.
         """
-        self.chats = {}
-        self.stories_lens = {}
         self.url = "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
+        self.redis_client = redis_client
 
     def _send_request(self, messages, token):
         """
@@ -34,6 +36,7 @@ class YaGptInference:
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json; charset=utf-8",
         }
+        print("MESSAGES ", messages)
         data = json.dumps(
             {
                 "modelUri": "gpt://b1g72uajlds114mlufqi/yandexgpt/latest",
@@ -59,16 +62,21 @@ class YaGptInference:
         Returns:
             None
         """
-        self.chats[chat_id] = [
-            {
-                "role": "system",
-                "text": "Ты менеджер по созданию презентаций, твоя задача помогать сотрудникам компании создавать презентации. Ты будешь составлять планы презентаций, а после реализовывать их в тексте презентации, учти, что план обязательно не должен превышать 6 пунктов, иначе презентация будет слишком большой.",
-            },
-            {
-                "role": "system",
-                "text": f"Привет, тебе предстоит составить презентацию на основе этого текста, а также, при необходимости, заменить уже созданный тобой текст, на другой, если пользователь попросит. Учти, что эта презентация - отчетность, поэтому очень важно, чтобы она была точной и лаконичной, не добавляй слишком много текста. А вот и текст опорного документа: {doctext}",
-            },
-        ]
+        self.redis_client.set(
+            chat_id,
+            str(
+                [
+                    {
+                        "role": "system",
+                        "text": "Ты менеджер по созданию презентаций, твоя задача помогать сотрудникам компании создавать презентации. Ты будешь составлять планы презентаций, а после реализовывать их в тексте презентации, учти, что план обязательно не должен превышать 6 пунктов, иначе презентация будет слишком большой.",
+                    },
+                    {
+                        "role": "system",
+                        "text": f"Привет, тебе предстоит составить презентацию на основе этого текста, а также, при необходимости, заменить уже созданный тобой текст, на другой, если пользователь попросит. Учти, что эта презентация - отчетность, поэтому очень важно, чтобы она была точной и лаконичной, не добавляй слишком много текста. А вот и текст опорного документа: {doctext}",
+                    },
+                ]
+            ),
+        )
 
     def get_base_presentation(self, message: str, chat_id: str, token: str):
         """
@@ -82,23 +90,47 @@ class YaGptInference:
         Returns:
             str: A JSON-formatted string representing the generated presentation, including titles and texts for each slide.
         """
-        if chat_id not in self.chats:
-            self.chats[chat_id] = [
-                {
-                    "role": "system",
-                    "text": "Ты менеджер по созданию презентаций, твоя задача помогать сотрудникам компании создавать презентации. Ты будешь составлять планы презентаций, а после реализовывать их в тексте презентации, учти, что план обязательно не должен превышать 6 пунктов, иначе презентация будет слишком большой.",
-                },
-            ]
+        if chat_id not in self.redis_client.keys():
+            self.redis_client.set(
+                chat_id,
+                str(
+                    [
+                        {
+                            "role": "system",
+                            "text": "Ты менеджер по созданию презентаций, твоя задача помогать сотрудникам компании создавать презентации. Ты будешь составлять планы презентаций, а после реализовывать их в тексте презентации, учти, что план обязательно не должен превышать 6 пунктов, иначе презентация будет слишком большой.",
+                        },
+                    ]
+                ),
+            )
         user_message = {
             "role": "user",
             "text": f"Давай начнем, {message}, не забудь, что для каждого слайда нужен текст и заголовок, отправь мне все это в формате json, чтобы я смог разделить твой ответ по слайдам, где слайд - элемент списка, у которого есть поля title и text, другие поля не допускаются, а презентация должна быть длиной не более 7 слайдов. Не допускай, чтобы в тексте слайда было пусто или же слишком мало текста, придерживайся 2-3 предложений, также не оставялй заголовки пустыми. Квадратные скобки текста слайдов не используй, это очень важно. Первый слайд будет титульным, поэтому туда нужен только заголовок, поле текст оставь пустым",
         }
-        self.chats[chat_id].append(user_message)
-        presentation_text = self._send_request(self.chats[chat_id], token)
-        self.chats[chat_id].append({"role": "assistant", "text": presentation_text})
+        # get chat from redis, update and set
+        self.redis_client.set(
+            chat_id,
+            str(self.redis_client.get(chat_id)[:-1] + ", " + str(user_message) + "]"),
+        )
+        presentation_text = self._send_request(
+            ast.literal_eval(self.redis_client.get(chat_id)), token
+        )
+        self.redis_client.set(
+            chat_id,
+            str(
+                self.redis_client.get(chat_id)[:-1]
+                + ", "
+                + str({"role": "assistant", "text": presentation_text})
+                + "]"
+            ),
+        )
         presentation_text = presentation_text[
-            presentation_text.find("[") : presentation_text.find("]") + 1
+            presentation_text.find("[") : presentation_text.rfind("]") + 1
         ]
+        presentation_text = (
+            presentation_text[:-1]
+            + ", "
+            + str({"title": "Спасибо за внимание!", "text": ""})
+        )
         return presentation_text
 
     def rewrite_text(self, message: str, old_message: str, chat_id: str, token: str):
@@ -116,9 +148,22 @@ class YaGptInference:
         """
         user_message = {
             "role": "user",
-            "text": f"Пользователю не подошел предложенный тобой текст: {old_message}, вот его требования для преределки текста: {message}, не забудь, что текст не долежн быть слишком длинным, а также не должен иметь лишних комментариев, чтобы легко встроиться в презентацию",
+            "text": f"Пользователю не подошел предложенный тобой текст: {old_message}, вот его требования для нового текста слайда: {message}, не забудь, что текст не долежн быть не больше 2 предложений, а также не должен иметь лишних комментариев, чтобы легко встроиться в презентацию.",
         }
-        self.chats[chat_id].append(user_message)
-        new_text = self._send_request(self.chats[chat_id], token)
-        self.chats[chat_id].append({"role": "assistant", "text": new_text})
+        self.redis_client.set(
+            chat_id,
+            str(self.redis_client.get(chat_id)[:-1] + ", " + str(user_message) + "]"),
+        )
+        new_text = self._send_request(
+            ast.literal_eval(self.redis_client.get(chat_id)), token
+        )
+        self.redis_client.set(
+            chat_id,
+            str(
+                self.redis_client.get(chat_id)[:-1]
+                + ", "
+                + str({"role": "assistant", "text": new_text})
+                + "]"
+            ),
+        )
         return new_text

@@ -19,6 +19,10 @@ class Settings(BaseSettings):
 
     Attributes:
         YandexGPT_KEY (str): The API key for Yandex GPT. Defaults to an empty string.
+        Redis_host (str): Redis server host.
+        Redis_port (int): Redis server port.
+        Redis_db (int): Redis db name.
+        Redis_password (str): Password for redis db.
 
     Configuration:
         The class uses the `Config` inner class to specify the environment file from which
@@ -26,6 +30,10 @@ class Settings(BaseSettings):
     """
 
     YandexGPT_KEY: str = ""
+    Redis_host: str = ("localhost",)
+    Redis_port: int = (6379,)
+    Redis_db: int = (0,)
+    Redis_password: str = ("neuroslide",)
 
     class Config:
         """

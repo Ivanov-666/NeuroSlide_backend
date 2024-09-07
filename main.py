@@ -2,7 +2,9 @@
 import json
 import os
 
+import redis
 from fastapi import Depends, FastAPI, File, UploadFile
+
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from neuroslide.chat_tokener import Tokener
@@ -17,7 +19,14 @@ from typing_extensions import Annotated
 app = FastAPI()
 settings = Settings()
 tokener = Tokener(settings.YandexGPT_KEY)
-chatmodel = YaGptInference()
+redisClient = redis.StrictRedis(
+    host=settings.Redis_host,
+    port=settings.Redis_port,
+    db=settings.Redis_db,
+    password=settings.Redis_password,
+    decode_responses=True,
+)
+chatmodel = YaGptInference(redisClient)
 
 app.add_middleware(
     CORSMiddleware,
