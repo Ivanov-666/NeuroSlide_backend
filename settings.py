@@ -1,4 +1,7 @@
+# -*- coding: utf-8 -*-
 from pydantic_settings import BaseSettings
+
+
 class EnvSettings(BaseSettings):
     """
     Configuration class for environment settings.
@@ -7,7 +10,7 @@ class EnvSettings(BaseSettings):
         ENV_FILE (str): The path to the environment file. Defaults to "envs/key.env".
     """
     ENV_FILE: str = "envs/key.env"
- 
+
 
 class Settings(BaseSettings):
     """

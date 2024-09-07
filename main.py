@@ -2,14 +2,17 @@
 import json
 import os
 
-from fastapi import FastAPI, File, UploadFile
+from fastapi import Depends, FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from neuroslide.chat_tokener import Tokener
-from neuroslide.schemas import generateRequest, rewriteRequest
+from neuroslide.plot import create_plot, read_excel_with_coordinates
+from neuroslide.schemas import generateRequest, PlotData, rewriteRequest
 from neuroslide.word_reader import WordFileReader
 from neuroslide.writer import YaGptInference
 from settings import Settings
 from starlette.responses import RedirectResponse
+from typing_extensions import Annotated
 
 app = FastAPI()
 settings = Settings()
@@ -94,3 +97,20 @@ async def rewrire_text(message: rewriteRequest):
         message.message, message.old_text, message.chat_id, token
     )
     return new_text
+
+
+@app.post("/plot")
+async def plot_graph(plot: Annotated[PlotData, Depends()]) -> StreamingResponse:
+    x_data, y_data = read_excel_with_coordinates(
+        plot.file.file,
+        plot.x_start_row,
+        plot.x_end_row,
+        plot.x_column,
+        plot.y_start_row,
+        plot.y_end_row,
+        plot.y_column,
+    )
+
+    img = create_plot(x_data, y_data, plot.chart_type, plot.x_bar_name, plot.y_bar_name)
+
+    return StreamingResponse(img, media_type="image/png")
