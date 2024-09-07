@@ -30,10 +30,10 @@ class Settings(BaseSettings):
     """
 
     YandexGPT_KEY: str = ""
-    Redis_host: str = ("localhost",)
-    Redis_port: int = (6379,)
-    Redis_db: int = (0,)
-    Redis_password: str = ("neuroslide",)
+    Redis_host: str = "localhost"
+    Redis_port: int = 6379
+    Redis_db: int = 0
+    Redis_password: str = "neuroslide"
 
     class Config:
         """

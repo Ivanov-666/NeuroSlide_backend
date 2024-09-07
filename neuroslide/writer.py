@@ -3,6 +3,7 @@ import ast
 import json
 
 import requests
+import redis
 
 
 class YaGptInference:
@@ -13,7 +14,7 @@ class YaGptInference:
             redis_client (redis.client.Redis): redis client for YaGpt chats
     """
 
-    def __init__(self, redis_client):
+    def __init__(self, redis_client: redis.Redis):
         """
         Initializes a new instance of YaGptInference with empty chat and stories length dictionaries.
         Sets the base URL for the Yandex GPT API.
@@ -76,6 +77,7 @@ class YaGptInference:
                     },
                 ]
             ),
+            ex=1800
         )
 
     def get_base_presentation(self, message: str, chat_id: str, token: str):
@@ -101,6 +103,7 @@ class YaGptInference:
                         },
                     ]
                 ),
+            ex=1800
             )
         user_message = {
             "role": "user",
@@ -110,6 +113,7 @@ class YaGptInference:
         self.redis_client.set(
             chat_id,
             str(self.redis_client.get(chat_id)[:-1] + ", " + str(user_message) + "]"),
+            ex=1800
         )
         presentation_text = self._send_request(
             ast.literal_eval(self.redis_client.get(chat_id)), token
@@ -122,6 +126,7 @@ class YaGptInference:
                 + str({"role": "assistant", "text": presentation_text})
                 + "]"
             ),
+            ex=1800
         )
         presentation_text = presentation_text[
             presentation_text.find("[") : presentation_text.rfind("]") + 1
@@ -153,6 +158,7 @@ class YaGptInference:
         self.redis_client.set(
             chat_id,
             str(self.redis_client.get(chat_id)[:-1] + ", " + str(user_message) + "]"),
+            ex=1800
         )
         new_text = self._send_request(
             ast.literal_eval(self.redis_client.get(chat_id)), token
@@ -165,5 +171,6 @@ class YaGptInference:
                 + str({"role": "assistant", "text": new_text})
                 + "]"
             ),
+            ex=1800
         )
         return new_text
