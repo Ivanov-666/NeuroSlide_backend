@@ -2,8 +2,9 @@
 import ast
 import json
 
-import requests
 import redis
+
+import requests
 
 
 class YaGptInference:
@@ -77,7 +78,7 @@ class YaGptInference:
                     },
                 ]
             ),
-            ex=1800
+            ex=1800,
         )
 
     def get_base_presentation(self, message: str, chat_id: str, token: str):
@@ -103,21 +104,22 @@ class YaGptInference:
                         },
                     ]
                 ),
-            ex=1800
+                ex=1800,
             )
         user_message = {
             "role": "user",
-            "text": f"Давай начнем, {message}, не забудь, что для каждого слайда нужен текст и заголовок, отправь мне все это в формате json, чтобы я смог разделить твой ответ по слайдам, где слайд - элемент списка, у которого есть поля title и text, другие поля не допускаются, а презентация должна быть длиной не более 7 слайдов. Не допускай, чтобы в тексте слайда было пусто или же слишком мало текста, придерживайся 2-3 предложений, также не оставялй заголовки пустыми. Квадратные скобки текста слайдов не используй, это очень важно. Первый слайд будет титульным, поэтому туда нужен только заголовок, поле текст оставь пустым",
+            "text": f"Давай начнем, {message}, не забудь, что для каждого слайда нужен текст и заголовок, отправь мне все это в формате JSON с полями text и title, чтобы я смог разделить твой ответ по слайдам, где слайд - элемент списка, у которого есть поля title и text, другие поля не допускаются, а презентация должна быть длиной не более 7 слайдов. Не допускай, чтобы в тексте слайда было пусто или же слишком мало текста, придерживайся 2-3 предложений, также не оставялй заголовки пустыми. Квадратные скобки текста слайдов не используй, это очень важно. Первый слайд будет титульным, поэтому туда нужен только заголовок, поле текст оставь пустым",
         }
         # get chat from redis, update and set
         self.redis_client.set(
             chat_id,
             str(self.redis_client.get(chat_id)[:-1] + ", " + str(user_message) + "]"),
-            ex=1800
+            ex=1800,
         )
         presentation_text = self._send_request(
             ast.literal_eval(self.redis_client.get(chat_id)), token
         )
+        print(presentation_text)
         self.redis_client.set(
             chat_id,
             str(
@@ -126,16 +128,18 @@ class YaGptInference:
                 + str({"role": "assistant", "text": presentation_text})
                 + "]"
             ),
-            ex=1800
+            ex=1800,
         )
         presentation_text = presentation_text[
             presentation_text.find("[") : presentation_text.rfind("]") + 1
         ]
         presentation_text = (
             presentation_text[:-1]
-            + ", "
-            + str({"title": "Спасибо за внимание!", "text": ""})
+            + ",\n"
+            + '{"title": "Спасибо за внимание!",\n"text": ""}'
+            + "\n]"
         )
+        print(presentation_text)
         return presentation_text
 
     def rewrite_text(self, message: str, old_message: str, chat_id: str, token: str):
@@ -158,7 +162,7 @@ class YaGptInference:
         self.redis_client.set(
             chat_id,
             str(self.redis_client.get(chat_id)[:-1] + ", " + str(user_message) + "]"),
-            ex=1800
+            ex=1800,
         )
         new_text = self._send_request(
             ast.literal_eval(self.redis_client.get(chat_id)), token
@@ -171,6 +175,6 @@ class YaGptInference:
                 + str({"role": "assistant", "text": new_text})
                 + "]"
             ),
-            ex=1800
+            ex=1800,
         )
         return new_text
