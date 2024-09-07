@@ -1,26 +1,20 @@
 import os
+import json
 from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import RedirectResponse
-from dotenv import load_dotenv
-from fantasium.text_to_speech import TtsModel
-from fantasium.chat_tokener import Tokener
-from fantasium.schemas import Message
-from fantasium.illustrator import Text2ImageAPI
-from fantasium.transcriber import Transcriber
-from fantasium.writer import GigachatInference
-from fantasium.filter import Filter
+from neuroslide.word_reader import WordFileReader
+from neuroslide.chat_tokener import Tokener
+from neuroslide.schemas import generateRequest, rewriteRequest
+from neuroslide.writer import GigachatInference
+from neuroslide.filter import Filter
 from settings import Settings
 
 app = FastAPI()
 settings = Settings()
 tokener = Tokener(settings.Gigachat_KEY)
-ttsmodel = TtsModel()
 chatmodel = GigachatInference(settings.Story_len)
-transcribe = Transcriber()
 filter = Filter()
-image_api = Text2ImageAPI('https://api-key.fusionbrain.ai/', settings.Kandinsky_API_KEY, settings.Kandinsky_SECRET_KEY)
-model_id = image_api.get_model()
 
 app.add_middleware(
     CORSMiddleware,
@@ -40,33 +34,31 @@ def main_function():
     """
     return RedirectResponse(url="/docs/")
 
-@app.post("/generate_complete")
-def generate_complete(message: Message):
-    #message = filter.filter_request(message)
-    token = tokener.get_token()
-    story_content, end_of_story = chatmodel.get_text(message.message, message.chat_id, token)
-    audio_data = ttsmodel.get_audio(story_content)
+@app.post("/upload_doc")
+async def generate_complete(chat_id: str, file: UploadFile = File(...)):
+    word_reader = WordFileReader()
+    file_content = await file.read()
 
+    with open(file.filename, 'wb') as f:
+        f.write(file_content)
+    text_from_word = word_reader.read_file(file.filename)
+
+    chatmodel.set_context(text_from_word, chat_id)
+    os.remove(file.filename)
+    
     return {
-        "story": story_content,
-        "end_of_story": end_of_story,
-        "transcription": audio_data,
+        "STATUS": "SUCCESS"
     }
 
-@app.post("/illustrator")
-def send_illustator(model: Message):
-    uuid = image_api.generate(model.message, model_id)
-    images = image_api.check_generation(uuid)
+@app.post("/get_base_presentation")
+async def generate_complete(message: generateRequest):
+    token = tokener.get_token()
+    presentation_text = chatmodel.get_base_presentation(message.message, message.chat_id, token)
 
-    return {"image": images[0]}
+    return json.loads(presentation_text)
 
-
-@app.post('/transcribe')
-async def upload_file(file: UploadFile = File()):
-    context = await file.read()
-
-    with open('temp_file.wav', 'wb') as temp_file:
-        temp_file.write(context)
-        result = transcribe.process('temp_file.wav')
-
-    return {"transcription": result}
+@app.post("/rewrite_text")
+async def rewrire_text(message: rewriteRequest):
+    token = tokener.get_token()
+    new_text = chatmodel.rewrite_text(message.message, message.old_text, message.chat_id, token)
+    return new_text

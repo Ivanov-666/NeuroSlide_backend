@@ -4,10 +4,7 @@ class EnvSettings(BaseSettings):
  
 
 class Settings(BaseSettings):
-    Gigachat_KEY: str = ''
-    Kandinsky_API_KEY: str = ''
-    Kandinsky_SECRET_KEY: str = ''
-    Story_len: int = 5
+    YandexGPT_KEY: str = ''
 
     class Config:
         env_file = EnvSettings().ENV_FILE
