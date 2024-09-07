@@ -9,6 +9,7 @@ class YaGptInference:
     YaGptInference is a class designed to interact with the Yandex GPT API for generating text completions.
     It maintains session contexts for different chats and facilitates the construction of presentation plans from given texts.
     """
+
     def __init__(self):
         """
         Initializes a new instance of YaGptInference with empty chat and stories length dictionaries.
