@@ -9,6 +9,7 @@ class EnvSettings(BaseSettings):
     Attributes:
         ENV_FILE (str): The path to the environment file. Defaults to "envs/key.env".
     """
+
     ENV_FILE: str = "envs/key.env"
 
 
@@ -23,10 +24,12 @@ class Settings(BaseSettings):
         The class uses the `Config` inner class to specify the environment file from which
         to load the settings.
     """
-    YandexGPT_KEY: str = ''
+
+    YandexGPT_KEY: str = ""
 
     class Config:
         """
         Configuration settings for the Settings class.
         """
+
         env_file = EnvSettings().ENV_FILE

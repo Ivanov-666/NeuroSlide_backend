@@ -9,10 +9,11 @@ class WordFileReader:
     Methods:
         read_file(file_path: str) -> str: Reads the content of the specified Word file and returns it as a string.
     """
+
     def read_file(self, file_path: str) -> str:
         """
         Reads the content of a Word document and returns the text.
-        
+
         Args:
             file_path (str): The path to the Word file to be read.
 

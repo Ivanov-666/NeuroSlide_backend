@@ -11,6 +11,7 @@ class generateRequest(BaseModel):
         message (str): The message content provided by the user for generating the presentation.
         chat_id (str): The unique identifier for the chat session associated with the request.
     """
+
     message: str
     chat_id: str
 
@@ -24,6 +25,7 @@ class rewriteRequest(BaseModel):
         old_text (str): The original text that needs to be rewritten.
         chat_id (str): The unique identifier for the chat session associated with the request.
     """
+
     message: str
     old_text: str
     chat_id: str
@@ -41,3 +43,4 @@ class PlotData(BaseModel):
     x_bar_name: str = Field("Время")
     y_bar_name: str = Field("Деньги")
     color: str = Field("blue")  # #fff тут тоже робит
+    title: str = Field("Plot")

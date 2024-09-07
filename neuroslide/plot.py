@@ -28,7 +28,13 @@ def read_excel_with_coordinates(
 
 
 def create_plot(
-    x_data, y_data, chart_type="line", x_bar_name="x", y_bar_name="y", color="blue"
+    x_data,
+    y_data,
+    chart_type="line",
+    x_bar_name="x",
+    y_bar_name="y",
+    color="blue",
+    title="Plot",
 ):
     data = pd.DataFrame({x_bar_name: x_data, y_bar_name: y_data})
 
@@ -39,11 +45,11 @@ def create_plot(
     if chart_type == "line":
         sns.lineplot(data=data, x=x_bar_name, y=y_bar_name, color=color)
     elif chart_type == "bar":
-        sns.barplot(data=data, x=x_bar_name, y=y_bar_name)
+        sns.barplot(data=data, x=x_bar_name, y=y_bar_name, color=color)
     elif chart_type == "scatter":
-        sns.scatterplot(data=data, x=x_bar_name, y=y_bar_name)
+        sns.scatterplot(data=data, x=x_bar_name, y=y_bar_name, color=color)
 
-    plt.title(f"{chart_type.capitalize()}")
+    plt.title(f"{title}")
 
     buffer = BytesIO()
     plt.savefig(buffer, format="png")

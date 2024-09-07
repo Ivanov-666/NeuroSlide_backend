@@ -111,6 +111,14 @@ async def plot_graph(plot: Annotated[PlotData, Depends()]) -> StreamingResponse:
         plot.y_column,
     )
 
-    img = create_plot(x_data, y_data, plot.chart_type, plot.x_bar_name, plot.y_bar_name)
+    img = create_plot(
+        x_data,
+        y_data,
+        plot.chart_type,
+        plot.x_bar_name,
+        plot.y_bar_name,
+        plot.color,
+        plot.title,
+    )
 
     return StreamingResponse(img, media_type="image/png")

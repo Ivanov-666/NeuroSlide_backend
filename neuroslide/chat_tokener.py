@@ -13,6 +13,7 @@ class Tokener:
         token_end_time (datetime): The time when the current token will expire.
         api_key (str): The API key used to request the access token.
     """
+
     def __init__(self, api_key):
         """
         Initializes the Tokener with the provided API key.
