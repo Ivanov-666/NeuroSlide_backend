@@ -54,7 +54,7 @@ conda activate neuroslide
    make start_service
 ```
 
-Также для работы понадобится .env файл, в котором будет находится IAM Token для YandexGpt название поля см. settings.py
+Также для работы понадобится .env файл, в котором будет находится IAM Token для YandexGpt и настроки для подключения к redis название полей см. в settings.py
 
 ## pre-commit
 
@@ -91,4 +91,9 @@ $ pre-commit run --all-files
 
 ```bash
 $ sudo apt install redis-server
+```
+   Запуск:
+
+```bash
+sudo systemctl restart redis.service
 ```
