@@ -92,8 +92,9 @@ $ pre-commit run --all-files
 ```bash
 $ sudo apt install redis-server
 ```
+
    Запуск:
 
 ```bash
-sudo systemctl restart redis.service
+sudo systemctl start redis.service
 ```

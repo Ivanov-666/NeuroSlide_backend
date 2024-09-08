@@ -87,7 +87,7 @@ async def generate_complete(message: generateRequest):
     presentation_text = chatmodel.get_base_presentation(
         message.message, message.chat_id, token
     )
-    return json.loads(presentation_text)
+    return presentation_text
 
 
 @app.post("/rewrite_text")

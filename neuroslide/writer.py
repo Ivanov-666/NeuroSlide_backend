@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 import ast
 import json
+import re
 
 import redis
-
 import requests
+from fastapi import HTTPException
 
 
 class YaGptInference:
@@ -119,28 +120,69 @@ class YaGptInference:
         presentation_text = self._send_request(
             ast.literal_eval(self.redis_client.get(chat_id)), token
         )
-        print(presentation_text)
-        self.redis_client.set(
-            chat_id,
-            str(
-                self.redis_client.get(chat_id)[:-1]
-                + ", "
-                + str({"role": "assistant", "text": presentation_text})
-                + "]"
-            ),
-            ex=1800,
-        )
-        presentation_text = presentation_text[
-            presentation_text.find("[") : presentation_text.rfind("]") + 1
-        ]
-        presentation_text = (
-            presentation_text[:-1]
-            + ",\n"
-            + '{"title": "Спасибо за внимание!",\n"text": ""}'
-            + "\n]"
-        )
-        print(presentation_text)
-        return presentation_text
+        try:
+            presentation_text_test = presentation_text[
+                presentation_text.find("[") + 1 : presentation_text.rfind("]")
+            ]
+            presentation_text_test = re.sub("[\[]", "<", presentation_text_test)
+            presentation_text_test = re.sub("[\]]", ">", presentation_text_test)
+            presentation_text_test = "[\n" + presentation_text_test + "\n]"
+            json.loads(presentation_text_test)
+        except Exception:
+            print("something went wrong")
+            self.redis_client.set(
+                chat_id,
+                str(
+                    self.redis_client.get(chat_id)[:-1]
+                    + ", "
+                    + str({"role": "assistant", "text": presentation_text})
+                    + "]"
+                ),
+                ex=1800,
+            )
+            user_message = {
+                "role": "user",
+                "text": f"Мы не смогли прочитать перевести твой ответ в формат JSON, перепиши его так, чтобы мы могли его считать, и отправить пользователю, помни, что доускаются только два поля: текст и заголовок, а также то, что у первого слайда поле текст также должно присутствовать, но быть пустым.",
+            }
+            # get chat from redis, update and set
+            self.redis_client.set(
+                chat_id,
+                str(
+                    self.redis_client.get(chat_id)[:-1] + ", " + str(user_message) + "]"
+                ),
+                ex=1800,
+            )
+            presentation_text = self._send_request(
+                ast.literal_eval(self.redis_client.get(chat_id)), token
+            )
+        finally:
+            print(presentation_text)
+            self.redis_client.set(
+                chat_id,
+                str(
+                    self.redis_client.get(chat_id)[:-1]
+                    + ", "
+                    + str({"role": "assistant", "text": presentation_text})
+                    + "]"
+                ),
+                ex=1800,
+            )
+            # проводим очистку ответа для парсинга в json
+            presentation_text = presentation_text[
+                presentation_text.find("[") + 1 : presentation_text.rfind("]")
+            ]
+            presentation_text = re.sub("[\[]", "<", presentation_text)
+            presentation_text = re.sub("[\]]", ">", presentation_text)
+            presentation_text = "[\n" + presentation_text + "\n]"
+            presentation_text = (
+                presentation_text[:-1]
+                + ",\n"
+                + '    {\n  ""     "title": "Спасибо за внимание!",\n       "text": ""\n    }\n]'
+            )
+        try:
+            return json.loads(presentation_text)
+        except Exception:
+            raise HTTPException(status_code=500, detail="Try again")
 
     def rewrite_text(self, message: str, old_message: str, chat_id: str, token: str):
         """
