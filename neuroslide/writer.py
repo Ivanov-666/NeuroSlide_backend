@@ -177,7 +177,7 @@ class YaGptInference:
             presentation_text = (
                 presentation_text[:-1]
                 + ",\n"
-                + '    {\n  ""     "title": "Спасибо за внимание!",\n       "text": ""\n    }\n]'
+                + '    {\n     "title": "Спасибо за внимание!",\n       "text": ""\n    }\n]'
             )
         try:
             return json.loads(presentation_text)
